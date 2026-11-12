@@ -1,0 +1,6 @@
+interface:
+  display_name: "Ming Runbook"
+  short_description: "初始化项目入口，整理已确认的经验与约定，并维护 AGENTS 摘要和过程知识"
+  default_prompt: "使用 $ming-runbook 按当前项目来源维护入口摘要与过程知识。"
+policy:
+  allow_implicit_invocation: true

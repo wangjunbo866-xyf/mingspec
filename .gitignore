@@ -1,0 +1,4 @@
+/mingspec/
+/openspec/
+__pycache__/
+*.py[cod]

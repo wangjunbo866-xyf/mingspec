@@ -1,0 +1,20 @@
+{
+  "name": "mingspec-local",
+  "interface": {
+    "displayName": "mingspec Local"
+  },
+  "plugins": [
+    {
+      "name": "mingspec",
+      "source": {
+        "source": "local",
+        "path": "./"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

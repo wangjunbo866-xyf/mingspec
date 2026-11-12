@@ -1,0 +1,6 @@
+interface:
+  display_name: "Ming Archive"
+  short_description: "核对验收与独立审查依据，吸收已交付规格，同步来源、状态与导航"
+  default_prompt: "使用 $ming-archive 按已授权范围收尾当前 Patch，核对验收依据并吸收已交付规则。"
+policy:
+  allow_implicit_invocation: true

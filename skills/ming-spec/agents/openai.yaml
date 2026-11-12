@@ -1,0 +1,6 @@
+interface:
+  display_name: "Ming Spec"
+  short_description: "维护需求归属、业务地图、SPEC 修订、影响与验收，衔接任务和收尾"
+  default_prompt: "使用 $ming-spec 核对当前项目的需求归属、规格及验收条件。"
+policy:
+  allow_implicit_invocation: true

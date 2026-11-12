@@ -1,0 +1,77 @@
+#!/usr/bin/env python3
+"""Initialize project skeletons and inspect task declarations or spec size."""
+
+import argparse
+import sys
+from pathlib import Path
+
+sys.dont_write_bytecode = True
+
+TEMPLATES = Path(__file__).resolve().parents[1] / 'templates'
+FILES = ('AGENTS.md', 'mingspec/readme.md', 'mingspec/runbook/readme.md',
+         'mingspec/specs/readme.md', 'mingspec/vendor/readme.md')
+
+
+def initialize(target):
+    templates = {name: (TEMPLATES / name).read_bytes() for name in FILES}
+    directories = [*reversed(target.parents), target, target / 'mingspec',
+                   target / 'mingspec/runbook', target / 'mingspec/specs',
+                   target / 'mingspec/vendor']
+    for path in directories:
+        if path.is_symlink():
+            raise ValueError(f'拒绝符号链接：{path}')
+        if path.exists() and not path.is_dir():
+            raise ValueError(f'目录路径被其他类型占用：{path}')
+    for name in FILES:
+        path = target / name
+        if path.is_symlink():
+            raise ValueError(f'拒绝符号链接：{path}')
+        if path.exists() and not path.is_file():
+            raise ValueError(f'文件路径被其他类型占用：{path}')
+    for name in FILES:
+        path = target / name
+        if path.exists():
+            print(f'保留：{name}')
+            continue
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with path.open('xb') as stream:
+            stream.write(templates[name])
+        print(f'创建：{name}')
+
+
+def main():
+    parser = argparse.ArgumentParser(prog='mingspec')
+    commands = parser.add_subparsers(dest='command', required=True)
+    init = commands.add_parser('init', help='创建缺失的空框架')
+    init.add_argument('path', nargs='?', default='.')
+    tasks = commands.add_parser('tasks', help='检查 Patch 当前状态、任务依赖和规格引用')
+    tasks.add_argument('--root', required=True, help='项目根目录')
+    tasks.add_argument('--patch', required=True, help='相对项目根的 Patch 目录')
+    size = commands.add_parser('spec-size', help='只读统计主规格行数，超过 300 行提醒评估拆分')
+    size.add_argument('--root', required=True, help='项目根目录')
+    size.add_argument('--spec', required=True, help='相对项目根的模块主规格路径')
+    args = parser.parse_args()
+    if args.command == 'spec-size':
+        from mingspec_size import check_spec_size
+        return check_spec_size(args.root, args.spec)
+    if args.command == 'tasks':
+        if not args.patch or Path(args.patch).is_absolute():
+            parser.error('--patch 必须是非空的项目相对目录')
+        from mingspec_tasks import check_tasks
+        return check_tasks(args.root, args.patch)
+    target = Path(args.path).absolute()
+    try:
+        initialize(target)
+    except ValueError as exc:
+        print(f'mingspec init: {exc}', file=sys.stderr)
+        return 2
+    except OSError as exc:
+        print(f'mingspec init: {exc}；可能有已创建的文件，请核对目标并修复后重跑。', file=sys.stderr)
+        return 1
+    print(f'初始化完成：{target}')
+    print('空框架已就绪；内容由 runbook Skill 分析和维护。')
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main())

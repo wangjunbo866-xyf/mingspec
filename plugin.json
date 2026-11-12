@@ -1,0 +1,17 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "mingspec",
+  "version": "0.2.0",
+  "description": "复用 Ming Spec、Ming Tickets、Ming Archive 和 Ming Runbook，维护项目规格、任务衔接、交付收尾与过程知识。",
+  "extensions": {
+    "com.openai": {
+      "interface": {
+        "displayName": "mingspec",
+        "shortDescription": "项目规格、任务衔接、交付收尾与过程知识",
+        "longDescription": "包含四条 Skill、共享模板和可选 Python 空框架工具。按项目授权维护资料，不提供后台服务或自动业务实施。",
+        "category": "Productivity",
+        "capabilities": []
+      }
+    }
+  }
+}
