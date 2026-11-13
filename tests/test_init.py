@@ -202,6 +202,9 @@ class InitTests(unittest.TestCase):
         agents = (target / 'AGENTS.md').read_text()
         for heading in ['Repository Map', 'Quick Commands', 'Key Conventions', 'Current Status']:
             self.assertIn('## ' + heading, agents)
+        conventions = agents.split('## Key Conventions', 1)[1].split('## Current Status', 1)[0]
+        self.assertIn('| 动作 | 规则入口 |', conventions)
+        self.assertNotIn('一句话', conventions)
         self.assertLess(len(agents.splitlines()), 115)
         self.assertNotIn('待确认', agents)
         self.assertIn('vendor/readme.md', (target / 'mingspec/readme.md').read_text())

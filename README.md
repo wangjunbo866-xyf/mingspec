@@ -1,7 +1,5 @@
 # mingspec
 
-**0.2.0-beta.1 · 预发布版**。适合试用和反馈，版本、验证结果及已知限制见 [Release Notes](RELEASE_NOTES.md)。
-
 mingspec 为持续演进的项目组织需求与上下文，让人和 AI **沿业务地图找到相关规则，围绕小目标修改，并把验收后的结果沉淀回当前规格**。
 
 它把项目入口、业务地图、需求规格、任务和经验连成一套可阅读、可追溯的文件体系。换一个人、一个 Agent 或一次对话，都能从项目入口继续查阅已有约定、正在进行的变更和完成依据。
@@ -49,7 +47,7 @@ mingspec/
 
 **让“当前是什么”和“这次要改什么”各有归属，变更前后能够对账。** 模块主规格记录已交付且有验收依据的规则；一次具体变更保存在同模块的 Patch 中，写清读取基线、影响、目标和验收条件。任务引用这些规则与条件，执行结果留在原任务。
 
-需求修订时，核对旧场景、新规则、任务与证据，保留稳定标识、条件和例外。验收及独立审查通过后，再将完整交付的规则吸收进主规格，并保留来源；未完成部分继续留在 Patch。接手者可以追到“为什么改、改了哪里、凭什么算完成”，减少需求在对话和文档之间悄悄漂移的机会。
+标准和完整变更修订时，核对旧场景、新规则、存在的任务与证据，保留稳定标识、条件和例外。验收及一次合并独立审查通过后，将完整交付的规则吸收进主规格，并保留来源；未完成部分继续留在 Patch。接手者可以追到“为什么改、改了哪里、凭什么算完成”，减少需求在对话和文档之间悄悄漂移的机会。
 
 修订与收尾分别见 [Revise a Patch](skills/ming-spec/SKILL.md#revise-an-existing-patch) 和 [Ming Archive](skills/ming-archive/SKILL.md)。
 
@@ -72,6 +70,8 @@ mingspec/
 | AC-03：无匹配结果 | 当用户提交起止日期、开始日期不晚于结束日期且查询无匹配订单时，订单列表应显示空结果，并保留用户已选择的起止日期。 |
 
 这些是写法示例，日期口径等业务条件仍需项目确认。句式帮助暴露缺失条件，验收编号让任务、测试和审查能引用同一预期；实际测试与独立审查负责判断实现是否满足要求。完整写法见 [EARS Requirements](skills/ming-spec/references/spec-anchors.md#ears-requirements)。
+
+本仓旧主规格仍有 `MUST/WHEN/THEN` 写法，采用“新增即用 EARS，改到哪条就转换哪条”的渐进策略。转换覆盖受影响规则的规范正文、场景与验收预期，保留原有语义和稳定编号；其他旧规则与历史记录保持原貌。仅修链接、错字或导航时沿用原表达。具体边界见 [Legacy Rule Migration](skills/ming-spec/references/spec-anchors.md#legacy-rule-migration)。
 
 ### 6. Carry Project Knowledge into the Next Change
 
@@ -121,7 +121,7 @@ mingspec 当前仍是 beta。实际适用性需要在项目中验证，运行平
 <a id="project-installation"></a>
 ## Installation
 
-先将发布包完整解压到一个固定目录，保留隐藏的 `.agents/` 和全部随附资源，不能只复制四份 Skill 说明。使用 mingspec 需要能读取本地项目文件并加载 Skill 的 AI 编程助手；配套命令工具需要 Python 3.9 或以上版本。
+先将公开产品仓库完整下载或克隆到本地，保留公开包内的目录和文件，不能只复制四份 Skill 说明。自行从开发源码准备安装包时，按 [Installation Details](USAGE.md#installation-details) 保留公开资源并排除内部资料。使用 mingspec 需要能读取本地项目文件并加载 Skill 的 AI 编程助手；配套命令工具需要 Python 3.9 或以上版本。
 
 以下是 WSL/Linux 下的项目安装方式。先在所用助手的 Skill 设置或说明中确认它支持从项目 `.agents/skills/` 目录加载指引；无法确认时先不要执行命令，不同助手的安装入口可能不同。把 `/path/to/mingspec` 换成下载后的产品目录，把 `/path/to/your-project` 换成你要开发的项目目录。先检查是否已有同名文件或链接；来源不明时保留现场，不覆盖或删除。
 
@@ -138,6 +138,18 @@ ln -s "/path/to/mingspec/skills/ming-runbook" "/path/to/your-project/.agents/ski
 <a id="plugin-installation"></a>
 如果助手支持本项目的插件格式，也可以通过插件方式加载同一套四个 Skill；同一项目选择一种方式，避免重复。插件安装、升级和卸载尚未完成实际验证，详细设置见 [插件与安装排查](USAGE.md#installation-details)。
 
+## Choose the Workflow
+
+按实际影响选择流程，不按改动行数判断：
+
+| 档位 | 适用范围 | 做法 |
+| --- | --- | --- |
+| 小修 | 单模块、低风险且不改变已有承诺的修正 | 直接改主规格，做适用检查，留一行来源 |
+| 标准变更 | 单模块新增或调整行为，没有高风险 | Patch、验收条件（AC）、适用验证、一次独立审查；任务按需 |
+| 完整流程 | 跨业务模块或高风险 | 完整影响分析、任务依赖、验证和规格收尾 |
+
+小修默认不建 Patch 或任务，也不要求独立审查。标准与完整档的收尾检查默认合为一次：同一评审先读当前规则，再核对来源和最终差异，留一份记录。实际影响扩大时升级流程；具体边界见[流程选择](USAGE.md#choose-the-workflow)。
+
 ## Quick Start
 
 安装并确认助手能看到四个 Skill 后，在你的项目里开始对话。首次接入可以先说：“用 Ming Runbook 查看这个项目，说明已有资料和建议整理的内容，先不要修改文件。”需要实际整理时，再明确允许修改的范围；已有授权不必重复确认。
@@ -150,21 +162,21 @@ ln -s "/path/to/mingspec/skills/ming-runbook" "/path/to/your-project/.agents/ski
 
    助手会结合现有项目整理需求说明，并列出尚未确定的问题。你可以检查日期范围、默认值和完成条件是否符合预期。
 
-2. 安排任务：
+2. 按需安排任务：
 
    > 需求已经确认。用 Ming Tickets 整理实现任务，注明先后顺序和每项怎样检查，暂时不要开始实施。
 
-   你会得到与需求对应的任务清单。这里完成的是工作安排，代码还没有因此实现。
+   有协作或依赖需要时，会得到与需求对应的任务清单；标准变更也可以直接依据 Patch 和 AC 实施。这里的任务安排不会自动启动代码修改。
 
 3. 实现并检查：
 
-   把需求说明和任务清单交给你选定的执行者，明确允许实施的范围。执行者完成代码和测试，并安排独立检查，留下实际结果。验收时再对照前面确认的完成条件，判断功能是否达到要求。mingspec 不绑定执行工具；测试失败或证据不足时，相关工作仍不能算完成。
+   把需求说明和任务清单交给你选定的执行者，明确允许实施的范围。执行者完成代码和测试，留下实际结果；独立审查可与下一步的规格收尾合并安排。验收时再对照前面确认的完成条件，判断功能是否达到要求。mingspec 不绑定执行工具；测试失败或证据不足时，相关工作仍不能算完成。
 
 4. 更新功能说明：
 
-   > 这项功能的验收和独立检查已经完成，结果记录在这里。用 Ming Archive 核对记录，把已完成的行为更新到功能说明中，保留尚未完成的内容。
+   > 这项功能的验收结果记录在这里。用 Ming Archive 准备更新后的功能说明，安排一次合并独立审查，通过后完成收尾，保留尚未完成的内容。
 
-   把“这里”替换为实际结果记录的位置。助手会核对本次功能的验收和检查依据，满足条件后才更新；缺少依据时会指出缺口。更新说明不会自动提交代码、发布或部署。
+   把“这里”替换为实际结果记录的位置。助手会核对本次功能的验收依据，把当前规则阅读与最终差异核对合为一次独立审查；已有同候选审查结果可复用，满足条件后才完成更新；缺少依据时会指出缺口。更新说明不会自动提交代码、发布或部署。
 
 工作中解决了可复用的问题，还可以说：“用 Ming Runbook 记录这次问题的原因、解决方法和验证结果，方便下次查阅。”一次普通讨论不会自动成为项目约定。
 
@@ -175,7 +187,8 @@ ln -s "/path/to/mingspec/skills/ming-runbook" "/path/to/your-project/.agents/ski
 - 工作由编程助手在对话中执行，依赖助手实际加载并遵循 Skill；没有后台监听或跨会话自动运行。
 - 需求和任务文档帮助组织工作，不能代替代码实现、测试、验收和独立检查。配套工具只补空框架、检查任务声明或提醒说明过长，不判断功能是否正确。
 - 修改文件和执行操作以你的授权范围为准。只读请求保持只读；安装、迁移或整理资料不会自动获得提交、发布或部署权限。
-- 本包的检查范围和实际结果见 [Release Notes](RELEASE_NOTES.md)。本地文件测试与受控 Skill 试用不等于你的项目已经通过验收，也不证明宿主会自动选择 Skill。
+- 历史项目试用、本项目当前使用的检查、模拟项目测试分别记录结果，只证明各自记录中的版本和范围；历史成功不表示现在已经重跑，也不证明你的项目已通过验证。
+- `tasks` 检查面向声明 `mingspec-tasks-v1` 的任务，支持保留数字 ID 和显式历史规格来源。本仓旧任务已迁入当前格式；其他项目的自由格式仍须按[转换边界](skills/ming-tickets/references/task-checks.md#write-compatible-tasks)处理。历史来源未声明 Patch 状态时会明确提示，检查通过不补造该状态或重验历史结果。
 - 当前运行与回归环境为 WSL/Linux。Windows 原生、macOS、最低 Python 3.9、独立可执行打包/安装，以及桌面插件安装、升级和卸载尚未验证；其他编程助手的兼容性和自动选择效果也需分别验证。
 
 ## Further Reading
@@ -193,30 +206,5 @@ ln -s "/path/to/mingspec/skills/ming-runbook" "/path/to/your-project/.agents/ski
 
 <a id="develop-mingspec"></a>
 <a id="verify"></a>
-[本地检查](#local-checks)：运行随包提供的测试和文档检查。
-
 <a id="design-history"></a>
-[方法与模板](USAGE.md#choose-a-template)：按操作选择包内的指引和模板。
-
-
-## Package Contents
-
-发布包包含 `scripts/`、`skills/`、`templates/`、`tests/`、插件清单及公开说明。`scripts/mingspec` 是 CLI 入口。
-
-`templates/mingspec/` 是创建空框架的模板；使用工具后，你的项目中会产生自己的 `mingspec/` 资料目录。发布包本身不附带维护者的内部规格、讨论记录或 Git 历史。使用产品无需这些内部资料。
-
-## Local Checks
-
-在解压后的产品根目录执行：
-
-```sh
-python3 -B -m unittest discover -s tests -v
-python3 -B scripts/check_documents.py .
-python3 -B scripts/mingspec --help
-```
-
-测试使用临时项目。文档检查只验证本地链接、锚点和英文标题，不能代替内容审查、宿主发现或业务验收。若 ZIP 解压工具未保留可执行权限，可以用 `python3 -B scripts/mingspec` 替代 `./scripts/mingspec`。
-
-## License
-
-本发布包采用 [Apache License 2.0](LICENSE)。
+[完整包与维护边界](USAGE.md#installation-details)：公开方法随 Skill 和 references 分发。根目录 `mingspec/` 的内部规格与开发过程不随包发布，使用产品无需读取这些资料；初始化模板 `templates/mingspec/` 保留。

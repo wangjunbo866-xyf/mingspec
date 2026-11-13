@@ -43,8 +43,10 @@ class PluginPackageTests(unittest.TestCase):
             product.mkdir()
             for name in ('scripts', 'templates', 'skills'):
                 shutil.copytree(ROOT / name, product / name)
-            shutil.copy2(ROOT / 'onboarding.md', product / 'onboarding.md')
+            for name in ('onboarding.md', 'README.md', 'USAGE.md'):
+                shutil.copy2(ROOT / name, product / name)
             shutil.copy2(ROOT / 'plugin.json', product / 'plugin.json')
+            shutil.copytree(ROOT / '.agents/plugins', product / '.agents/plugins')
             target = Path(directory) / 'business project'
             target.mkdir()
             original = b'# Existing Project\n\nKeep this decision.\n'
@@ -79,6 +81,15 @@ class PluginPackageTests(unittest.TestCase):
                 shared = archive.parent / '../ming-spec/references' / resource
                 self.assertEqual(shared.read_bytes(),
                                  (ROOT / 'skills/ming-spec/references' / resource).read_bytes())
+            # A moved public product must stand on its own, including every
+            # transitive Markdown dependency. No private specs or checkout fallback.
+            self.assertFalse((product / 'mingspec').exists())
+            self.assertFalse((product / 'AGENTS.md').exists())
+            self.assertFalse((product / 'CONTEXT.md').exists())
+            result = subprocess.run(
+                [sys.executable, '-B', str(product / 'scripts/check_documents.py'),
+                 str(product)], cwd=target, capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
             self.assertEqual({p.name for p in links.iterdir()}, SKILLS)
 
     @unittest.skipUnless(hasattr(Path, 'symlink_to'), 'symbolic links unavailable')

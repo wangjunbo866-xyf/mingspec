@@ -1,88 +1,60 @@
 ---
 name: ming-spec
-description: 起草或修订 SPEC、对账现有 Patch 的规则/设计/任务/证据，分析影响和验收条件，管理业务地图及规格迁移。查询只读，只改 SPEC 保持 tasks 不变；任务修订交 Ming Tickets，验收后的交付收尾交 Ming Archive。
+description: 按小修、标准或完整流程维护 SPEC、核对 Patch 一致性，分析影响和验收条件，管理需求归属、业务地图及规格迁移。
 ---
 
 # Ming Spec
 
-版本：0.1.3。维护需求、影响、验收、业务地图及项目规格；每次处理一个明确 Patch。域与模块按业务职责划分，具体名称、规则和工作区约定从目标读取；Skill、CLI、插件是入口或分发方式。
+版本：0.1.6。先执行[公共边界](references/shared-boundaries.md)，再走当前操作。默认步骤直接执行；表内条件触发时，读取对应完整规则块及必要公共依赖。目标业务规则写前读全，方法参考按操作展开；依据见[按需阅读](references/spec-home.md#small-step-maintenance)。
 
 ## Identify the Request
 
-1. 从用户请求和原任务确定目标项目根、需求范围、操作（查询／起草／修订／收尾）及已有授权。区分 Skill 安装目录与目标项目：先解析本 SKILL.md 的符号链接真实路径，再按真实所在目录读取模板和相邻 Skill；完整产品布局须保留，项目资料从目标根查找。
-2. 读取目标 AGENTS.md、适用子目录规则和 README，沿根→域→模块导航找到相关模块的唯一主规格、当前 Patch 及开发约定。起草/修订前读取 [Specification Home and Migration](references/spec-home.md#canonical-home) 核对统一布局、主责 Patch 与版本；旧资料尚未符合布局、接入或迁移请求时，执行该资源的迁移分支及权限保护。必要时在授权目标内定向查找；项目名、目录名和实验案例都不代替真实来源。
-3. 识别需求归属或业务地图新增、迁移、废弃意图时，读取 [Business Map](references/business-map.md)，从唯一根入口逐层定位域、模块及稳定 ID；现有导航承担对应层的地图职责。查询只读，实际维护复用当前有效授权。
-4. 在原任务简记当前规则、主责域/模块、SPEC、tasks、证据、适用验证命令和收尾方式。跨域/模块目标按上述共享布局维护一份主责 Patch；只有可分别交付、验收的目标才拆分，并记录真实依赖。一次性清单、日志和结果留原任务/Issue/PR 或已有证据位置，不为留痕新设目录、索引或文档类型。新增长期文档须有现有位置无法承载的明确用途，不要求新配置或另一套规格。
-5. 核对 HEAD、相关未提交/未跟踪资料、并行工作与允许写入的职责。沿用目标的工作区约定，保留既有主规格、历史变更和第三方资料；写前检查目标及父目录实际路径，越出授权范围时停止该写入。
+1. 沿目标 AGENTS、README 和根→域→模块导航定位主责模块、主规格及当前 Patch，核对实际 HEAD、工作区与本次写入范围。
+2. 只读查询在回答现状、来源与缺口后结束。写入前按 [Choose the Change Tier](references/patch-workflow.md#choose-the-change-tier)说明档位与依据；小修执行下节，小修完成后结束；标准/完整档起草候选或按表接续。
 
-目标／基线或已有主规格异常缺失、来源冲突、当前 change 不唯一、必要资源不可读时，说明具体缺口，只暂停依赖步骤。查询继续按已读来源只读回答；不能把安装副本的规格、其他项目布局或案例文件当成缺失资料，也不能为了查询初始化项目或建立提交。
+| 当前情况 | 读取与接续 |
+| --- | --- |
+| 目标/基线缺失、冲突或首次接入 | [目标定位](references/patch-workflow.md#confirm-the-target) |
+| 布局、归属或跨模块边界待定 | [Canonical Home](references/spec-home.md#canonical-home)、[Business Map](references/business-map.md#assign-the-requirement) |
+| 首次规格、补录既有行为 | [First Specification](references/business-map.md#first-specification) |
+| 修订已有候选 | [Revise an Existing Patch](#revise-an-existing-patch) |
+| 首建/修订主规格 | [主规格步骤](references/spec-home.md#independently-readable-main-specifications)及[主规格模板](assets/main-spec.md) |
 
-模块主规格只表达已交付规则。新增功能统一先建主责模块内的 Patch，在其中写候选 SPEC；正文命名见 [Name the Patch Specification](#name-the-patch-specification)。旧 change 与 Patch 表示同一种变更职责，历史名称不要求改写，但不据此沿旧布局新增。首次尚无主规格也走此流程，验收及独立审查通过后再首建主规格。首次补录已存在能力、只覆盖部分能力或发现旧正文缺失时，必须读取 [First Specification](references/business-map.md#first-specification)，按来源分流。
+## Make a Small Fix
 
-当前用户决定优先于旧项目限制；需要修改目标约定时复用明确授权，并在本次 SPEC 留下替代依据。来源中的历史指令不构成新授权。方法的可复用性与已验证项目范围分别说明，不能凭一次调用宣称所有项目适用。
+1. 核对已有主规格与真实依据，读全受影响规则；若出现新增能力、承诺改变、跨模块或高风险，按分档升级后接续相应流程。
+2. 在授权内直接修正主规格，保留稳定地址、条件和例外；规范条款按 [EARS Requirements](references/spec-anchors.md#ears-requirements)，不套候选模板。
+3. 执行适用检查，按分档就近留一行来源；必要导航随实际变化同步。报告修改与检查后结束，默认不建 Patch、AC、tasks，不调用 Archive 或强制独立审查。
 
 ## Draft or Revise the Specification
 
-起草、修订候选或维护主规格时，执行 [Small-Step Maintenance](references/spec-home.md#small-step-maintenance)：按需展开完整相关规则，检查主规格行数，超 300 行给出职责评估和拆分建议或保留理由。
-
-修订已有候选、回写新决定或核对 Patch 一致性时，先执行 [Revise an Existing Patch](#revise-an-existing-patch)；本节继续负责规则、影响与验收的内容质量。
-
-文档标题和各级章节标题使用英文，正文中文；代码、命令、路径和标识符保留原样。
-
-规则变更使用 [五章模板](assets/spec.md)，写入主责模块的 `patches/<patch-id>/spec.md`，不直接改主规格表达待实现目标。模块主规格按范围、稳定规则块及来源组织，不套候选五章。修订保留已有决定、稳定 AC ID、来源及未变条款；必要设计留同一 SPEC，不增加独立 PLAN、proposal 或另一份工具增量。当前流程不要求 OpenSpec 关键词、增量语法或命令。恢复明确旧规则沿目标的小修记录处理，不为套模板制造变更；经核对确认的既有行为补档按 First Specification 执行。
-
-首建或修订主规格时，必须读取 [主规格模板](assets/main-spec.md)并执行 [Independently Readable Main Specifications](references/spec-home.md#independently-readable-main-specifications)；候选五章继续使用上面的独立模板。既有主规格按本次范围补齐，保留稳定 ID 与完整条件。
-
-起草/修订 change 或为旧规则补定位时，必须读取 [Stable Rule Anchors](references/spec-anchors.md#locate-the-rule)：按稳定规则地址定位；规则变更在第二章记录受影响目标与读取基线，纯定位维护沿原任务记录。新增/退役/并行影响按对应分支处理。规则锚点与 AC ID 分工明确，查询保持只读。
-
-- **核对现状。** 区分已确认契约、静态代码、真实运行和拟改变行为；未知保持未知，已修复样本不倒造 RED。
-- **说明影响。** 写清旧／新行为、不变项及理由，追查调用、接口、文件职责、共享或并行影响和必要回归；关联地图中的归属与跨 Feature 影响，说明排除影响的依据，预计文件清单不扩大授权。
-- **表达规则与验收。** 起草、修订规范性需求或验收预期时，必须执行 [EARS Requirements](references/spec-anchors.md#ears-requirements)，保留条件、例外、约束强度及稳定规则/AC ID。验收覆盖正常、异常、边界和兼容，写明公开测试边界；预期与实际结果分开，范围、理由、历史及验证记录保持原职责。
-- **控制规则粒度。** 新写或获准修改时，一条规则表达一个可独立验证的行为；例子和具体边界放对应场景，共同条件可追且含义完整。不设通用字符上限，不因长度告警批量拆旧规则或删减条件/例外。
-- **逐项对账场景。** 修改、拆分、合并或退役时，按 [Describe the Change](references/spec-anchors.md#describe-the-change) 对照完整旧场景，记录保留、修改、退役及目标/AC；改名、数量相同均不能代替语义核对。有意删改说明决定来源与影响，未解遗漏只阻塞相关交付和吸收。
-- **保留决定。** 关联具体 SPEC 版本、范围与真实用户确认。业务承诺、AC、公共测试边界、必要检查或执行范围实质变化时重核受影响部分；进度安排不使已有授权失效。
-- **核对完整性。** 五章齐全不代表决定足够；指出必要缺口及其阻塞范围，不用占位符掩盖未完成分析。
-
-起草或修订规格的授权不自动启动业务代码实施、安装或 Git／环境交付。
+1. 完整读取目标的相关业务规则、条件、例外及公共依赖，按 [Draft Content](references/patch-workflow.md#draft-content)核对正文职责、行为粒度与必要决定。使用[五章候选模板](assets/spec.md)，在主责模块的 `patches/<patch-id>/spec.md` 写本次变更；将范围、现状依据、行为/AC、设计与测试决定、未决项填入对应章节。
+2. 对每个目标记录规格版本及实际工作区依据、旧/新行为与保持项，复用已有规则 ID，新增目标注明计划地址。新增规则 ID、补锚点、改名或定位有疑问时读取 [Locate the Rule](references/spec-anchors.md#locate-the-rule)。
+3. 按可独立验证的行为写完整规则及稳定 AC，规范条款与预期执行 [EARS Requirements](references/spec-anchors.md#ears-requirements)。正常、异常、边界和兼容结果按实际适用性填写，未知列为具体问题。
+4. 涉及旧行为修改、拆分、合并或退役时，读取[场景对账](references/spec-anchors.md#describe-the-change)，逐项记录旧场景去向及 AC。纯定位/修链接沿原任务记录；具体命名分支见下文。
+5. 统计相关主规格当前行数；超 300 行、尚无主规格或需要拆分时，读取 [Small-Step Maintenance](references/spec-home.md#small-step-maintenance)处理。本次规格的必要决定、影响及测试边界明确后，进入完成检查；未解部分报告具体依赖。
 
 ## Revise an Existing Patch
 
-这是现有规格维护中的操作，不增加阶段。沿 Identify the Request 找到同一 Patch 的实际 SPEC、已有任务、相关主规格/导航及证据，核对读取版本、并行差异和本次允许写入的职责。明确修订内容是起点；只要求核对或没有明确修改内容时，先只读检查矛盾、缺漏和重复，已一致则报告零差异。
-
-1. **确定范围。** 只要求改 SPEC 时，只写获准的候选规格；可读取已有 tasks 判断影响，但保持任务文件逐字不变，连“待重核”标记也不代写。明确要求同步整个 Patch 的已有规格和任务，或完整交付授权覆盖时，说明将维护的 SPEC/tasks 后直接继续。已有授权不逐文件/逐任务重问，必要新决定或权限缺口仅暂停依赖动作。
-2. **双向对账。** 从本次变化逐项检查相关规则/AC、设计决定、任务引用与真实依赖、旧证据适用性及当前导航。任务拆分或验证发现也可影响上游设计/规格；记录新观察和未决项，不凭实现现状或技术失败放宽业务承诺。保留稳定 ID、未变条件和原始证据，按 Draft or Revise 核对全部受影响场景。
-3. **按职责写回。** 已确认且获准的业务/设计决定回同一 SPEC；获准维护 tasks 时调用 [Ming Tickets](../ming-tickets/SKILL.md#hand-off-and-reconcile-results) 更新相关任务及下游，保留旧版本、历史结果和无关任务。仅改 SPEC 时，将受影响任务 ID、待重核依据及未同步原因留在获准的 SPEC 记录或答复中，不生成任务。仅获准任务整理时发现需要改 SPEC，报告需交回的具体决定，不越界改规格。
-4. **处理缺口与新目标。** 修订已有材料不自动补建从未创建的 tasks；只有明确任务编排或完整交付范围覆盖创建时才由 Ming Tickets 接手。来源异常缺失/冲突按 Identify the Request 保留现场，不能当作首次创建。请求成为独立新目标时说明分流依据，保留原 Patch 目标和历史；新建仅依已有授权进行，未授权则建议另建。跨 Patch 只核对实际相关引用，写入须在授权内。
-5. **核对结果。** 写后重读受影响内容，检查引用、场景、依赖和证据适用性；报告实际修改、已核对/保持、未同步及原因、受影响任务/证据、剩余缺口和下一步。没有必要修改时不强造版本、日志或文件。候选仍按真实状态保留，业务实施与主规格吸收继续走原验收及审查流程。
-
-完成条件：本次影响有对应处置或明确缺口，允许范围内的相关材料一致，范围外文件与历史原件保全；文档一致不代表业务完成。
+1. 读取同一 Patch 的实际 SPEC、相关规则、tasks 和证据，按[修订范围](references/patch-workflow.md#revision-scope)确定写入对象。
+2. 按[双向对账](references/patch-workflow.md#reconcile-a-revision)检查规则/AC、设计、任务依赖及证据适用性；旧场景按 [Describe the Change](references/spec-anchors.md#describe-the-change)逐项处理。
+3. 将确认的决定写回 SPEC；任务处置按同一修订范围交 [Ming Tickets](../ming-tickets/SKILL.md#hand-off-and-reconcile-results)。
+4. 写后重读受影响内容，按[修订结果](references/patch-workflow.md#reconcile-a-revision)报告变更、保持项、未同步项及缺口。
 
 ## Name the Patch Specification
 
-新建候选规格正文使用主责模块的 `patches/<patch-id>/spec.md`。Patch 是一次变更，SPEC 是其中的规格职责；模块根部主规格与 Patch 内候选按位置、状态及验收依据区分。混合已交付切片和未交付目标的 Patch 仍是变更规格，保持各部分真实状态。
+普通新候选沿起草步骤给出的路径。文件身份待定、纯记录或改名时，按[正文命名](references/patch-workflow.md#name-the-candidate)选择文件名。新候选使用主责模块的 `patches/<patch-id>/spec.md`；纯记录、历史与获准改名分别执行该规则的对应场景。改名时接续[迁移核对](references/spec-home.md#migrate-an-existing-project)。
 
-纯修复回执或历史资料归集沿用已有名称，例如 `change.md`；不因五章结构强造候选规则或另建 Patch。已吸收历史及未获准迁移的既有文件保留原名；新约定不自动触发批量改名。同一 Patch 对同一规格职责仅保留一份正文，任务、原始需求及历史工具增量按各自来源职责保留；新候选不生成兼容增量。
+## Hand Off to Project Workflows
 
-获准改名时先保全实际原文，再同步当前导航、主规格回链、跨模块锚点和检查记录中的路径；保持稳定 ID、AC、版本、原始回执和业务状态。按 [迁移与保全](references/spec-home.md) 核对范围，不改写原始运行日志或把改名当作重新验收；验收后仍按规则吸收主规格。
-
-## Handoff to Matt and Project Workflows
-
-本节保留历史标题以兼容已有引用。明确拆任务或完整交付授权覆盖任务编排时，必须使用 [Ming Tickets](../ming-tickets/SKILL.md)，先说明目标 tasks.md；纯讨论、查询、确认观点或仅写 SPEC 不写任务。任务引用、拆分、依赖、逐项测试/文档和完成条件按其 [Decompose and Check Dependencies](../ming-tickets/SKILL.md#decompose-and-check-dependencies) 执行；交接、方法来源、结果回写与变化后的重核按其 [Hand Off and Reconcile Results](../ming-tickets/SKILL.md#hand-off-and-reconcile-results) 执行。实施、TDD 与独立审查仍由选定执行者按 SPEC 和项目流程完成。
-
-实施有准备依赖或关键技术假设未证实时，必须读取并执行 [Ming Tickets 前置验证步骤](../ming-tickets/SKILL.md#decompose-and-check-dependencies)，按已有授权处理前置任务、执行边界、证据位置及第二/四/五章回写；无该类依赖不强制实验。只写 SPEC 时仅维护获准的规格内容并报告任务影响，不因读取该步骤创建或改写 tasks。
-
-独立评审面对真实完整差异，包括未提交、未跟踪、删除和重命名；确认来源、实际命令/结果、跳过及评审处置留原任务，不另建自动状态库或调度系统。
-
-验收规则删除或纯规格改名时，必须读取 [Verify Removed or Renamed Behavior](references/spec-anchors.md#verify-removed-or-renamed-behavior)，按可用旧行为基线检查退出或延续；缺基线或证据不足记未验证。标题、关键词搜索无结果与文档改名本身不能证明业务验收。
-
-复用证据须核对候选、输入、环境、依赖和范围，按影响补验补审。环境失败不算目标 RED；已修复样本记录当前事实及适用历史依据。必要失败、证据缺口或实质决定未解只暂停依赖推进；规格完成不代表实现、检查或 CI 通过。
+只有当前请求明确任务编排，或交付授权内按分档确需任务时，才按[任务调用](../ming-tickets/references/task-workflow.md#task-scope)接续 [Ming Tickets](../ming-tickets/SKILL.md)。出现准备依赖或未知技术假设时，读取[前置验证](../ming-tickets/references/task-workflow.md#prerequisite-verification)，将问题、判据和任务影响写入本次允许的产物。
 
 ## Consolidate Delivered Behavior
 
-本节保留旧收尾链接。验收后的交付收尾由 [Ming Archive](../ming-archive/SKILL.md) 承担：带上同一 Patch、当前候选与目标清单、实际验收/独立审查依据和已有授权，使用共享收尾规则继续。证据或决定缺口按影响交回对应职责；仅写 SPEC 不自动收尾。经核对的既有行为补档、纯定位维护与获准迁移仍按本 Skill 的原分支处理。
+标准/完整档的规格吸收交 [Ming Archive](../ming-archive/SKILL.md)，携带同一 Patch、候选版本、目标及已有验收/审查依据；尚未审查时把拟吸收正文与最终差异一并交一次合并审查。小修在 Make a Small Fix 完成，不再走此分支。
 
 ## Complete the Specification Work
 
-本次首建或修订主规格时，完成前执行 [Independent Reading Check](references/spec-home.md#independent-reading-check)，由未参与该部分修改者先判断正文场景，再读取来源对账；必要缺口未解时只报告已完成范围。
-
-交付前按 [EARS 完成检查](references/spec-anchors.md#ears-completion-check) 逐项核对本次规范条款和验收预期，并在原任务记录句式检查与语义保全结果；链接、关键词或格式检查通过不能代替该核对。交付报告实际产物、检查与审查结论、未验证范围及可取回来源。使用负担按实际记录，一次试用不证明长期收益、跨项目覆盖或自动接续可靠性。
+1. 按 [EARS Completion Check](references/spec-anchors.md#ears-completion-check)核对条款与验收预期。
+2. 涉及删除或纯改名验收时执行[旧行为验证](references/spec-anchors.md#verify-removed-or-renamed-behavior)；涉及主规格首建/修订时执行[独立阅读检查](references/spec-home.md#independent-reading-check)。
+3. 按公共边界完成适用检查，报告产物、结果、未验证范围与来源。仅起草/修订候选时完成作者核对即可，默认将标准/完整档的一次独立审查安排在拟交付正文与最终差异齐备时；用户明确要求现在审查 SPEC 时记录其实际范围，不把它当未来实现的验收。任务编排和吸收分别接续对应操作，不因阶段切换重复审查。

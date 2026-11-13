@@ -7,6 +7,7 @@ PATCH_STATES = {'draft', 'ready', 'implemented', 'accepted', 'absorbed', 'retire
 TASK_STATES = {'pending', 'in_progress', 'completed', 'needs_recheck', 'retired'}
 FIELDS = {'state', 'blocked_by', 'rules', 'acs', 'questions'}
 ID = r'[A-Za-z][A-Za-z0-9_-]*'
+TASK_ID = r'(?:' + ID + r'|[0-9]+(?:\.[0-9]+)*)'
 
 
 class Checker:
@@ -16,6 +17,7 @@ class Checker:
         self.documents = {}
         self.tasks = {}
         self.indices = {}
+        self.notes = []
 
     def report(self, code, path, message, tid=None):
         subject = str(path)
@@ -103,27 +105,57 @@ class Checker:
             fields[key] = value
         return fields
 
-    def load_tasks(self, path):
-        if path in self.tasks:
-            return self.tasks[path]
-        tasks = self.tasks[path] = {}
+    def check_patch_source(self, path, header):
         spec = path.with_name('spec.md')
+        legacy = header.get('legacy_spec')
+        if legacy is not None:
+            if spec.is_symlink() or spec.exists():
+                self.report(3, path, 'legacy_spec conflicts with existing spec.md')
+                legacy = None
+            elif (Path(legacy).is_absolute() or '://' in legacy or '#' in legacy or
+                  Path(legacy).suffix != '.md' or Path(legacy).name == 'tasks.md'):
+                self.report(3, path, 'invalid legacy_spec: ' + legacy)
+                return
+            else:
+                spec = path.parent / legacy
         spec = self.resolve(spec.parent, spec.name)
         if spec is not None:
             lines = self.read(spec)
             if lines is not None:
-                if self.frontmatter(spec, lines).get('status') not in PATCH_STATES:
+                if legacy is not None:
+                    try:
+                        same_source = spec.samefile(path)
+                    except OSError as exc:
+                        self.report(4, spec, 'unreadable source identity: ' + str(exc))
+                        return
+                    if same_source:
+                        self.report(3, path, 'invalid legacy_spec: source is the task document')
+                        return
+                header = self.frontmatter(spec, lines)
+                if legacy is not None and not any(line.strip() for line in lines):
+                    self.report(4, spec, 'empty historical source')
+                elif legacy is not None and 'status' not in header:
+                    self.notes.append(str(spec.relative_to(self.root)) +
+                                      ': 历史来源未声明 Patch 状态；仅检查任务状态、依赖及引用，不推断历史交付状态。')
+                elif header.get('status') not in PATCH_STATES:
                     self.report(3, spec, 'Patch state missing or invalid')
+
+    def load_tasks(self, path):
+        if path in self.tasks:
+            return self.tasks[path]
+        tasks = self.tasks[path] = {}
         lines = self.read(path)
+        header = self.frontmatter(path, lines) if lines is not None else {}
+        self.check_patch_source(path, header)
         if lines is None:
             return tasks
-        if self.frontmatter(path, lines).get('format') != 'mingspec-tasks-v1':
+        if header.get('format') != 'mingspec-tasks-v1':
             self.report(4, path, 'unsupported tasks format; expected mingspec-tasks-v1')
             return tasks
         current = None
         for line in lines:
             if line.startswith('## '):
-                match = re.fullmatch(r'## (' + ID + r') .+', line)
+                match = re.fullmatch(r'## (' + TASK_ID + r') .+', line)
                 current = None
                 if not match:
                     self.report(3, path, 'invalid task heading: ' + line)
@@ -177,6 +209,7 @@ class Checker:
             return None
         anchors, slugs, acs = {}, {}, {}
         acceptance = False
+        legacy_acceptance = False
         table = 0
         columns = 0
         for line in lines:
@@ -191,8 +224,11 @@ class Checker:
                 slugs[slug] = count + 1
                 actual = slug + ('-' + str(count) if count else '')
                 anchors[actual] = anchors.get(actual, 0) + 1
-                if len(heading[1]) <= 3:
-                    acceptance = heading[1] == '###' and title == 'Acceptance'
+                level = len(heading[1])
+                if level <= 2:
+                    legacy_acceptance = level == 2 and title == '3. Behavior and Acceptance'
+                if level <= 3:
+                    acceptance = legacy_acceptance or (level == 3 and title == 'Acceptance')
                     table = False
             if not acceptance:
                 continue
@@ -208,6 +244,8 @@ class Checker:
                     self.report(4, path, 'unsupported Acceptance table delimiter')
                     table = 0
                 if table == 2:
+                    cells[0] = re.sub(r'^<a\s+(?:id|name)=["\'][^"\']+["\']\s*></a>\s*',
+                                      '', cells[0])
                     if not re.fullmatch(ID, cells[0]) or len(cells) != columns or columns < 2:
                         self.report(4, path, 'unsupported Acceptance table row')
                         continue
@@ -259,7 +297,7 @@ class Checker:
                         source = self.resolve(path.parent, filename)
                     else:
                         source, target = path, ref
-                    if not re.fullmatch(ID, target):
+                    if not re.fullmatch(TASK_ID, target):
                         self.report(3, path, 'invalid blocker ID: ' + ref, tid)
                         continue
                     if source is None:
@@ -300,6 +338,8 @@ class Checker:
                     stack.append((child, iter(edges[child])))
 
     def finish(self):
+        for note in self.notes:
+            print('NOTE ' + note)
         for path, tasks in self.tasks.items():
             for tid in tasks:
                 print('CHECKED ' + path.relative_to(self.root).as_posix() + '#' + tid)

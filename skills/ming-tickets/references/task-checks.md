@@ -31,6 +31,14 @@ python3 "<product>/scripts/mingspec" tasks --root "<project>" --patch "mingspec/
 
 新建任务用[任务模板](../assets/tasks.md)：文件开头声明 `format: mingspec-tasks-v1`，每项用 `## <Task-ID> <Title>`；二级标题只用于任务。五字段各一次：state 为 pending/in_progress/completed/needs_recheck/retired；其他四项为单行 JSON 数组，无项用 `[]`。rules、acs、questions 至少一项非空。交付、边界、验证和实际结果继续放正文；状态/依赖/引用只维护这一组字段，不另加完成勾选或旧字段。
 
-blocked_by 用同文件 ID 或 `relative/tasks.md#ID`；rules/acs 用 `relative/spec.md#ID`；questions 每项为 `["问题位置#锚点", "判据位置#锚点"]`，同段可指同一锚点。路径从承载文档定位，解析后须在目标项目根内。规则/问题锚点支持显式 HTML id/name 与 ATX 标题；AC ID 来自 SPEC 的 `### Acceptance` 简单单行表格首列，不要求额外伪造 HTML 锚点。采用者应从实际 SPEC 填入定位，删除模板占位符；缺失或不支持的定义交回 Ming Spec，不能仅为检查通过改业务条件。
+任务 ID 支持 ASCII 字母开头的字母/数字/下划线/连字符，以及原有纯数字、点分数字（如 `1`、`1.1`）。blocked_by 只声明整项任务完成依赖；仅等待某项部分成果的条件留在正文，保持原并行边界，不升级为整项阻塞。
+
+blocked_by 用同文件 ID 或 `relative/tasks.md#ID`；rules/acs 用 `relative/spec.md#ID`；questions 每项为 `["问题位置#锚点", "判据位置#锚点"]`，同段可指同一锚点。路径从承载文档定位，解析后须在目标项目根内。规则/问题锚点支持显式 HTML id/name 与 ATX 标题。AC ID 来自 `### Acceptance` 或旧五章 `## 3. Behavior and Acceptance` 内的简单单行 ID 表格；首列可有一个空的 HTML 锚点再接 ID，其他章节的表格不作为 AC 定义。采用者应从实际 SPEC 填入定位，删除模板占位符；缺失或不支持的定义交回 Ming Spec，不能仅为检查通过改业务条件。
 
 旧自由版式、复杂表格或不兼容 Patch 状态可能返回 4 或 3，按实际诊断处理。查询不改写；只有授权覆盖当前文件的格式转换时才转换，并先保全可取回原件、任务 ID、依赖及历史结果。不得批量转换其他 Patch；已有 completed 也不能为消除错误降成 pending。没有转换授权时报告这一具体缺口，保留原任务。
+
+### Historical Specification Sources
+
+旧 Patch 沿用 proposal/design 且同目录没有 spec.md 时，在 tasks frontmatter 显式填写 `legacy_spec: proposal.md`（或实际历史 Markdown 相对路径）。检查器只读该真实来源和任务引用，不猜文件、不生成 spec.md；现存 spec.md 与该声明冲突时返回 3。
+
+历史来源未声明 status 时，输出 NOTE 明示“历史来源未声明 Patch 状态”，检查任务状态、依赖与引用。退出 0 也不代表历史 Patch 状态已确认；已声明的非法/重复 status 仍失败。来源缺失、空白、不可读或越界返回 4；非 Markdown、绝对地址、任务自身或其别名作为来源返回 3。默认仍检查同目录 spec.md，旧文件仅在明确转换授权下使用此分支。

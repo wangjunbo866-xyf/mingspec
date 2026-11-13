@@ -77,6 +77,124 @@ class TaskChecks(unittest.TestCase):
             self.assertIn('patch/tasks.md#T2', result.stdout)
             self.assertEqual(snapshot(self.root), before)
 
+    def test_numeric_task_ids_keep_local_and_cross_patch_dependencies(self):
+        other = self.root / 'other'
+        self.write_patch(other, task('1.1', 'completed'))
+        self.write_patch(self.patch, task('1', 'completed', ['../other/tasks.md#1.1']) +
+                         task('2.1', 'completed', ['1']))
+        before = snapshot(self.root)
+        result = self.run_cli()
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn('tasks.md#2.1', result.stdout)
+        self.assertEqual(snapshot(self.root), before)
+        for body, expected in [
+            (task('1', blockers=['1.1']) + task('1.1', blockers=['1']), 'cycle'),
+            (task('1', blockers=['2.3']), 'unknown blocker'),
+            (task('1', 'completed', ['1.1']) + task('1.1'), 'blocker not completed'),
+            (task('1..2'), 'invalid task heading'),
+            (task('1.'), 'invalid task heading'),
+        ]:
+            with self.subTest(body=body):
+                self.write_patch(self.patch, body + task('Independent'))
+                result = self.run_cli()
+                self.assertEqual(result.returncode, 3, result.stdout + result.stderr)
+                self.assertIn(expected, result.stdout)
+
+    def test_explicit_legacy_source_preserves_unrecorded_patch_state(self):
+        (self.patch / 'spec.md').unlink()
+        source = self.patch / 'proposal.md'
+        source.write_text('# Historic Proposal\n## Rule\nOriginal requirement.\n')
+        body = task('1', 'completed', rules=['proposal.md#rule'], acs=[])
+        header = '---\nformat: mingspec-tasks-v1\nlegacy_spec: proposal.md\n---\n# Tasks\n'
+        (self.patch / 'tasks.md').write_text(header + body)
+        before = snapshot(self.root)
+        result = self.run_cli()
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn('历史来源未声明 Patch 状态', result.stdout)
+        self.assertEqual(snapshot(self.root), before)
+        for status, code in [('status: accepted', 0), ('status: unknown', 3),
+                             ('status: accepted\nstatus: absorbed', 3)]:
+            with self.subTest(status=status):
+                source.write_text('---\n' + status + '\n---\n## Rule\nOriginal requirement.\n')
+                self.assertEqual(self.run_cli().returncode, code)
+        (self.patch / 'tasks.md').write_text(header.replace('legacy_spec: proposal.md\n', '') + body)
+        self.assertEqual(self.run_cli().returncode, 4)
+        (self.patch / 'tasks.md').write_text(header + body)
+        (self.patch / 'spec.md').write_text(SPEC)
+        result = self.run_cli()
+        self.assertEqual(result.returncode, 3, result.stdout + result.stderr)
+        self.assertIn('legacy_spec conflicts', result.stdout)
+
+    def test_legacy_source_cannot_hide_invalid_or_escaped_inputs(self):
+        (self.patch / 'spec.md').unlink()
+        outside = self.root.parent / 'outside.md'
+        outside.write_text('secret input')
+        (self.patch / 'escaped.md').symlink_to(outside)
+        (self.patch / 'alias.md').symlink_to(self.patch / 'tasks.md')
+        os.link(self.patch / 'tasks.md', self.patch / 'hardlink.md')
+        (self.patch / 'invalid.md').write_bytes(b'\xff')
+        (self.patch / 'empty.md').write_text('')
+        (self.patch / 'rules.md').write_text('## Rule\nUnchanged requirement.\n')
+        for source, code in [('missing.md', 4), ('../../outside.md', 4),
+                             ('escaped.md', 4), ('invalid.md', 4),
+                             ('empty.md', 4), ('tasks.md', 3), ('alias.md', 3), ('hardlink.md', 3), ('notes.txt', 3),
+                             (str(outside), 3), ('https://example.com/spec.md', 3)]:
+            with self.subTest(source=source):
+                (self.patch / 'tasks.md').write_text(
+                    '---\nformat: mingspec-tasks-v1\nlegacy_spec: ' + source + '\n---\n# Tasks\n' +
+                    task(rules=['rules.md#rule'], acs=[]))
+                result = self.run_cli()
+                self.assertEqual(result.returncode, code, result.stdout + result.stderr)
+                self.assertIn('UNAVAILABLE' if code == 4 else 'invalid legacy_spec', result.stdout)
+                self.assertNotIn('secret input', result.stdout)
+                self.assertNotIn('当前声明检查通过', result.stdout)
+
+    def test_legacy_acceptance_tables_keep_scope_and_reject_ambiguity(self):
+        legacy = SPEC.replace('### Acceptance', '## 3. Behavior and Acceptance\n### Requirement: Original')
+        legacy = legacy.replace('| AC-1 |', '| <a id="ac-1"></a>AC-1 |')
+        self.write_patch(self.patch, task(), legacy)
+        result = self.run_cli()
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        for spec, body, code in [
+            (legacy.replace('## 3. Behavior and Acceptance', '## Other Material'), task(), 3),
+            (legacy + '\n## Other\n| ID | Result |\n| --- | --- |\n| AC-2 | Extra |\n',
+             task(acs=['spec.md#AC-2']), 3),
+            (legacy.replace('| --- | --- |', '| broken | --- |'), task(), 4),
+            (legacy + '\n### Acceptance\n| ID | Result |\n| --- | --- |\n| AC-1 | Duplicate |\n',
+             task(), 3),
+            (legacy.replace('| <a id="ac-1"></a>AC-1 |', '| 1.1 |'), task(), 4),
+        ]:
+            with self.subTest(spec=spec):
+                self.write_patch(self.patch, body, spec)
+                self.assertEqual(self.run_cli().returncode, code)
+
+    def test_legacy_conflict_keeps_unreadable_symlink_diagnostics(self):
+        product = self.root / 'readable product'
+        shutil.copytree(CLI.parent, product)
+        Path(self.tmp.name).chmod(0o755)
+        self.root.chmod(0o755)
+        self.patch.chmod(0o755)
+        private = self.root / 'private'
+        private.mkdir()
+        (private / 'source.md').write_text(SPEC)
+        (self.patch / 'spec.md').unlink()
+        (self.patch / 'spec.md').symlink_to(private / 'source.md')
+        (self.patch / 'proposal.md').write_text(SPEC)
+        (self.patch / 'tasks.md').write_text(
+            '---\nformat: mingspec-tasks-v1\nlegacy_spec: proposal.md\n---\n# Tasks\n' +
+            task() + task('Independent', state='unknown'))
+        private.chmod(0)
+        try:
+            identity = {'user': 65534, 'group': 65534, 'extra_groups': ()} if os.geteuid() == 0 else {}
+            result = subprocess.run([sys.executable, '-B', str(product / 'mingspec'),
+                                     'tasks', '--root', str(self.root), '--patch', 'patch'],
+                                    cwd=self.root, capture_output=True, text=True, timeout=10, **identity)
+        finally:
+            private.chmod(0o755)
+        self.assertEqual(result.returncode, 4, result.stdout + result.stderr)
+        for diagnostic in ['legacy_spec conflicts', 'UNAVAILABLE', '#Independent', 'invalid task state']:
+            self.assertIn(diagnostic, result.stdout)
+
     def test_invalid_or_conflicting_states_and_duplicate_ids_are_reported(self):
         for spec, body, expected in [
             (SPEC.replace('draft', 'unknown'), task(), 'Patch state'),

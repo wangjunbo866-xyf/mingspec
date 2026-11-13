@@ -2,6 +2,17 @@
 
 2026-11-12，预发布版。适合试用与反馈，尚未作为稳定版发布。
 
+## Main Branch Update
+
+2026-11-13，main 分支同步本次规范化的公开产品文件，沿用现有公开提交历史。此更新不重发 v0.2.0-beta.1，也不替换原标签或 Release 附件。
+
+- 公开 Skill 与 references 自足，保持初始化模板；内部规格、内部 AGENTS/CONTEXT 和开发历史不随公开仓库同步。
+- 工作流分为小修、标准变更、跨模块或高风险的完整流程；收尾独立阅读与最终差异检查默认合并为一次。
+- 同步当前任务检查兼容处理、文档路径检查及回归；退出已无用途的旧 onboard 导航。
+- 在此公开副本的 WSL/Linux、Python 3.12.3 环境运行 49 项回归，全部通过；26 篇 Markdown 的本地链接、锚点与英文标题检查通过，3 个外链未联网验证。更新 SHA256SUMS 以匹配当前 main 文件。
+
+本次没有重新验证宿主发现、桌面安装、跨平台或真实业务交付。下方版本介绍和 Validation 保留原 beta 发布时的范围；原 Release 附件仍使用各自随包校验值。
+
 ## Included
 
 - Ming Spec、Ming Tickets、Ming Archive 和 Ming Runbook 四个 Skill，包含相邻参考、模板与宿主选择元数据。
@@ -12,7 +23,7 @@ CLI 入口为 `scripts/mingspec`；沿用旧 `bin/mingspec` 路径的调用需�
 
 ## Validation
 
-在 WSL/Linux、Python 3.12.3 下，对本包完成以下验证：
+以下记录对应 2026-11-12 原 v0.2.0-beta.1 发布包，不是当前 main 的重跑结果。在 WSL/Linux、Python 3.12.3 下，对该包完成以下验证：
 
 - 随包提供的 36 项回归全部通过，覆盖初始化、任务检查、篇幅提醒、插件资源和文档检查器。
 - 23 篇公开 Markdown 文档的本地链接、锚点与英文标题检查通过。

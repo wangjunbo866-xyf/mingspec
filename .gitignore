@@ -2,3 +2,6 @@
 /openspec/
 __pycache__/
 *.py[cod]
+/AGENTS.md
+/CONTEXT.md
+/.venv/
